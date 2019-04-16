@@ -1,38 +1,218 @@
-\documentclass{article}
-\usepackage[utf8]{inputenc}
+\documentclass[11pt, a4paper]{article}
 
-\title{Convex Analysis Motivation\\ for Support Vector Machine}
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=3cm,left=2cm,right=2cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\DeclareMathOperator{\sech}{sech}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage{graphicx}
+\graphicspath{ {image/} }
+\usepackage{pgfplots}
+\pgfplotsset{width=10cm,compat=1.9}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\title{Convex Optimization in Support Vector Machine}
 \author{Lenny Fishler \& Tin Tun Naing}
 \date{April 2018}
-
 \begin{document}
 
+\newcommand*{\QEDA}{\hfill\text{QED}}%
+\newcommand*{\QEDB}{\hfill\ensuremath{\square}}%
+\newcommand\tab[1][1cm]{\hspace*{#1}}
 \maketitle
 
 
-\section{Content}
-\subsection{Motivation}
+\section{Introduction}
+\subsection{A Brief Introduction to Machine Learning}
+Machine Learning is a very neat application of Mathematics, Statistics and Computer Science which help data professionals infer patterns about the data which are not trivially found with a naked eye.
+There are various approaches one can use, depending on the problem at hand as well as the size of the data set. Generally, there are two types of machine learning: Supervised Machine Learning and Unsupervised Machine Learning:
 \begin{itemize}
-\item Spam or not spam.
-\item Linear Classification using hyperplanes 
+\item \textbf{Supervised Machine Learning} is generally used for classification problems where the classes are known (Is this email spam or not spam? Is this handwritten digit a `7' or a `2'?). In this type of learning, the algorithm ingests data points, or training examples in which there is input and a `label'. For example, there would be an image of a number and then the label for that number. (e.g. image of handwritten 2 with label `2', or text of an email, with label `spam'). SVMs and some Neural Networks are examples of Supervised ML Techniques.
+\item \textbf{Unsupervised Machine Learning} techniques come handy when there is a lot of data which is unlabeled. In other words, there is data, but little is known about this data, and we typically use computers to `cluster' this data into appropriate categories, thereby figuring out patterns which were not known previously. (e.g. groups of shoppers characterized by their browsing and purchase histories)
 \end{itemize}
-\subsection{Concepts(Background) for Support Vector Machine}
-\begin{itemize}
-\item Primal Constrained Optimization Problemm
-\item Laragian Dual Function
-\item Dual Optimization
-\item Farkas' Lemma (Proof)
-\item Linear Separability (Proof)
-\item Margin of Hyperplane (Proof)
-\item Strong Duality??
-\item Cost Function??
-\item Addressed Issues/concerns and further discussions.
-\end{itemize}
-\subsection{Code}
-Note: should use program demonstration as an opener, then exmplanation after all the concepts
-\begin{itemize}
-\item Simple example from scikit learn on SVMs
-\item Find an interesting problem/data set
-\item try to incorporate convex into the code
-\end{itemize}
+\subsection{Background of SVMs}
+A Support Vector Machine (SVM) is a discriminative classifier formally defined by a separating the positive and negative examples in the dataset by a hyperplane, and falls in supervised machine learing category. In other words, given labeled training data, the algorithm outputs an optimal hyperplane which categorizes new examples. In two dimensional space this hyperplane is a line dividing a plane in two parts where in each class lays on either side.\\ \\
+More advanced SVMs use data transformations, also called kernels, to nicely separate and transform the data so it is easily separable by a hyperplane, before transforming it into the original space and finding a good classification boundary. After getting the boundary, we can find coefficients of the optimal hyperplane that separates the two data sets. Ideally, by using the optimal hyperplane, given a labeled training data set (supervised learning), we can classify them into two classes.
+\subsection{Convex Optimization in Machine Learning}
+In optimization and machine learning, we are always trying to minimize the cost function, or error. For example, in linear regression, the cost function is least square equation. The main reason convex functions are useful in machine learning is that they guarantee the existence of global minimum over a feasible region, which is the space of the solutions satisfying the constraints of an optimization problem. For example, in Gradient Descent algorithm which concerns with finding the minimum of a differentiable function, the process will be less computationally intensive if the function is (strictly) convex since a strict convex function has a unique global minimum (see [1], pg.263).
+\section{Mathematical Concepts for SVM}
+\subsection{Classification}
+Consider the data set: $\{(x_1,y_1),\ldots,(x_n,y_n)\}$ where $x_i \in \mathbb{R}^p$ and $y_i \in \{1,-1\}$. We wish to find a function $f:\mathbb{R}^p\to \mathbb{R}$ such that
+\begin{align}
+\begin{cases}
+f(x_i) > 0&\text{if }y_i = 1\\
+f(x_i) <0&\text{if }y_i = -1
+\end{cases}
+\end{align}
+Then using the function $f$, given a random data set of $x$'s, we can predict respective $y$'s (i.e we can categorize the random data set into two different groups). In Classification problems, it is said that the level set of $f$ at 0, $\{x|f(x) = 0\}$,  separates/classifies/discriminates a data set into two sets.
+\subsection{Linear Discrimination}
+In eq (1), $f$ can be any function. However, when we are classifying data, it is common to restrict $f$ to be a certain type of function, such as linear, quadratic. 
+If we restrict $f$ to be an affine function, then geometrically, we are looking for a hyperplane $H$ such that $\{x|\langle a,x\rangle + b = 0\}$ and we can rewrite eq (1) as follows:
+\begin{align}
+\begin{cases}
+\langle a, x_i \rangle + b > 0&\text{if }y_i = 1\\
+\langle a, x_i \rangle + b < 0&\text{if }y_i = -1
+\end{cases}
+\end{align}
+where $a\in \mathbb{R}^p$ and $b\in\mathbb{R}$. Now, given data set is finite, for some $\delta > 0$, eq (2) is equivalent to \begin{align}
+\begin{cases}
+\langle a, x_i \rangle + b \ge \delta&\text{if }y_i = 1\\
+\langle a, x_i \rangle + b \le -\delta&\text{if }y_i = -1
+\end{cases}
+\end{align}
+It is trivial that any $a$ and $b$ that satisfy eq (3) also satisfy q(2). For the other direction, by multiplying eq (2) with some positive constant $c$ large enough, then $(a',b') := (ca, cb)$.
+\begin{figure}[h]
+    \centering
+    \includegraphics[scale = 0.5]{hyperplanes.png}
+    \caption{Hyperplanes separating two data sets}
+    \label{fig:my_label}
+\end{figure}
+\subsection{Separability}
+\textbf{Farkas' Lemma: }Let $A \in \mathbb{R}^{n\times m}$ and $b \in \mathbb{R}^n$. Then exactly one of the following statement is true:
+\begin{enumerate}
+\item There exists $x \in \mathbb{R}^m$ such that $Ax \le b$.
+\item There exists $y \in \mathbb{R}^n$ such that $A^Ty = 0$ and $y \ge 0, y^T b < 0$.
+\end{enumerate}
+In other words, a vector is either in a closed convex cone or there exists a hyper plane separating that vector from the convex cone.\\ \\
+\textbf{Remark 1}: There are a lot of different versions of Farkas' Lemma. The lemma above is adaptation from Rockafellar's \textit{Convex Analysis} [1] (see pg. 200-201). A few other different versions of the lemma can be found in Dattorro's \textit{Convex Optimzation and Euclidean Distance Geometry}.\\ \\
+\textbf{Theorem 1: } Given two data sets,  the convex hull of the two data sets intersects iff the two data sets are not linearly separable.\\
+\textbf{Proof: }First let's prove $\Rightarrow$. Consider two data sets, $\{x_1,\ldots,x_n\}$ and $\{y_1,\ldots,y_m\};\ x_i,y_i\in \mathbb{R}^p$. Let $z$ be in the intersection of the convex hulls of $\{x_1,\ldots,x_n\}$ and $\{y_1,\ldots,y_m\}$. Then we can write $z$ as the convex combination,
+\begin{align*}
+z = \sum_n \lambda_n x_n = \sum_m \mu_m y_m
+\end{align*}
+where $\lambda_i,\mu_i > 0,\ \lambda_1+\ldots+\lambda_n = \mu_1+\ldots+\mu_m = 1$. Now if ${x_1,\ldots,x_n}$ and ${y_1,\ldots,y_m}$ are linearly separable, there exists $a \in \mathbb{R}^p,\ b\in \mathbb{R}$ such that $\langle a,x_i\rangle + b > 0 $ and $\langle a,y_i\rangle + b < 0 $ for all $x$ and $y$. However for $z$, we get
+\begin{align*}
+\langle a, z \rangle &= \langle a, \sum_n \lambda_n x_n \rangle = \sum_n \lambda_n a^Tx_n > \sum_n \lambda_n (-b) = -b\sum_n \lambda_n = -b \\
+\langle a, z \rangle &= \langle a, \sum_m \mu_m y_m \rangle = \sum_m \mu_m a^Ty_m < \sum_m \mu_m (-b) = -b\sum_m \mu_m = -b
+\end{align*}
+which is a contradiction. Thus, if the convex hull of the two data sets intersects, the two data sets are not linearly separable. \\ \\
+Now let's prove $\Leftarrow$. Consider eq (3). Let $I = \{i| y_i = 1\}$ and $J = \{j| y_j = - 1\}$. In the matrix form, linear inequalities of q (3) is equivalent to $AX \ge U$, where $A$ is $n \times (p+1)$ whose $k-$th row is $[x_k^T\ 1]$ if $k \in I$ and $[-x_k^T\ -1]$ if $k \in J$, X is the concatenation of $a \in \mathbb{R}^p$ and b, and $U \in \mathbb{R}^n$, whose entries are $\delta >0$. \\ \\
+If there does not exists $ -X \in \mathbb{R}^{p+1}$ such that $A (-X) \le -U$ (i.e there is no hyperplane separating the two data sets), then there exists $Y \in \mathbb{R}^n$ such that $A^T Y = 0$ and $Y \ge 0, Y^T (-U) <0$. Let the $k$-th term of $Y$ be $\lambda_k$ if $k \in I$ and be $\mu_k$ if $k\in J$. Then using the conditions of $Y$ from Farkas' Lemma, $A^T Y = 0$, and $U > 0, Y \ge 0, Y^T U > 0$, we have
+\begin{align}
+\sum_{k\in I}\lambda_k x_k - \sum_{k\in J} \mu_k x_k &= 0\\ \sum_{k\in I}\lambda_k &= \sum_{k\in J} \mu_k\\
+\sum_{k\in I}\lambda_k\delta + \sum_{k\in J} \mu_k\delta &> 0 \\
+\sum_{k\in I}\lambda_k + \sum_{k\in J} \mu_k &> 0
+\end{align}
+since the last result above implies that $\lambda_k, \mu_k >0$, we can define\begin{align*}
+\lambda_k' = \frac{\lambda_k}{\sum_{k\in I} \lambda_k} \text{ and } \mu_k' = \frac{\mu_k}{\sum_{k\in J} \mu_k}
+\end{align*}
+Then dividing eq (4) with $\sum_{k\in I} \lambda_k$ gives us\begin{align*}
+\frac{\sum_{k\in I}\lambda_k x_k}{\sum_{k\in I}\lambda_k } &= \frac{\sum_{k\in J}\mu_k x_k}{\sum_{k\in J}\mu_k }\\
+\sum_{k\in I} \lambda_k' x_k &= \sum_{k\in J} \mu_k' x_k
+\end{align*}
+Also note that\begin{align*}
+\sum_{k\in I} \lambda_k' = \sum_{k \in I} \frac{\lambda_k}{\sum_{k\in I} \lambda_k} = \frac{\sum_{k\in I} \lambda_k}{\sum_{k\in I} \lambda_k} = 1
+\end{align*}
+Similarly, we have $\sum_{k\in J}\mu_k' =1$. Thus we have, $z =\sum_{k\in J}\mu_k' x_k = \sum_{k\in I}\lambda_k' x_k$, for some $z \in \mathbb{R}^p$, which implies $z$ is in the convex hulls of both data sets. Thus, if the two data sets are not linear separable, then their convex hulls intersect.\QEDB
+\subsection{Lagrangian Multipliers}
+An optimization problem is typically written as follows:
+\begin{align*}
+\min_x f(x)&\\
+\text{s.t}\ \ g_i(x) &\le 0\tab i = 1\ldots m\\
+h_i(x) &= 0\tab i = 1\ldots p\
+\end{align*}
+$f(x)$ is called the objective function or the cost function, $g_i(x)$ is called inequality constraint function and $h_i(x)$ is called equality constraint function. In other words, we are looking for $x^*$ such that\begin{align*}
+x^* = \inf\{f(x)| g_i(x) \le 0,\ i = 1\ldots m,\ h_j(x) = 0,\ j = 1\ldots p\}
+\end{align*}
+The Lagrangian associated with the optimization problem above is:
+\begin{align}
+L(x, \lambda, \mu) = f(x) + \sum_{i = 1}^m \lambda_i g_i(x) + \sum_{i = 1}^p \mu_i h_i(x)
+\end{align}
+where $\lambda_i$ and $\mu_i$ are Lagrange multipliers.
+\subsection{Dual Problem}
+The Larangian Dual function of eq $(8)$ is defined as follows:
+\begin{align}
+F(\lambda,\mu) = \inf_x L(x,\lambda,\mu)
+\end{align}
+Then the dual optimization problem is:\begin{align*}
+\max\ &F(\lambda,\mu)\\
+\text{s.t}\ &\lambda \ge 0
+\end{align*}
+\section{Finding the optimal hyperplane}
+In figure 1, the region between the two hyper plane is called the margin, $M = \{x| \langle a, -\delta \le x\rangle + b \le \delta\}$. \\
+The optimal hyperplane that separates the two data sets must lie exactly between the two data sets. Thus, by maximizing the distance between two hyper planes which lie in the margin, $M$, and separate the two data sets, we can find the optimal hyperplane.
+\\ \\
+Consider hyperplanes $H_1 = \{x| \langle a,x\rangle +b = \delta\}$ and $H_2 = \{x| \langle a,x\rangle +b = -\delta\}$ (See figure 1). And let $x_1$ and $x_2$ be  points on hyperplanes $H_1$ and $H_2$, respectively. Consider the line $L$ that passes through $x_1$ in the direction of the normal vector $a$. The equation of $L$ will be $x_1 + at, t\in\mathbb{R}$. The intersection of $L$ and $H_2$ is given by:
+\begin{align*}
+\langle a, x_2\rangle + b &= a^T x_2 +b = a^T (x_1+at) + b = - \delta\\
+t &= \frac{-\delta - b - a^Tx_1}{a^Ta} = \frac{- \delta-b - \delta - b}{||a||^2} = \frac{- 2\delta}{||a||^2}
+\end{align*}
+Thus, the distance between $H_1$ and $H_2$ is:\begin{align*}
+|x_2 - x_1| = \big|x_1 - \frac{2\delta}{||a||^2}\ a -x_1\big| = \frac{2\delta}{||a||^2}\ ||a|| = \frac{2\delta}{||a||}
+\end{align*}
+For mathematical convenience, set $\delta = 1$. Then, the distance between two hyper plane is $\frac{2}{||a||}$. Since we want to maximize the distance subject to the two hyper planes, we have an optimization problem:\begin{align*}
+\max\ & \frac{2}{||a||}\\
+\text{s.t}\ &\langle a, x_k  \rangle+ b \ge 1 \tab k\in I \\
+&\langle a, x_k  \rangle+ b \le - 1 \tab k\in J
+\end{align*}
+Note that maximizing $\frac{2}{||a||}$ is equivalent to minimizing $||a||$. Thus, the dual problem of our original optimal problem is\begin{align*}
+\min\ & \frac{||a||^2}{4}\\
+\text{s.t}\ &\langle a, x_k  \rangle+ b \ge 1 \tab k\in I \\
+&\langle a, x_k  \rangle+ b \le - 1 \tab k\in J
+\end{align*}
+and its Lagrangian function is:
+\begin{align}
+L(a,b,\lambda,\mu) &= \frac{||a||^2}{4} + \sum_{k\in I} \lambda_k\big(1 - \langle a, x_k  \rangle - b\big) +\sum_{k\in J} \mu_k\big(1 + \langle a, x_k  \rangle + b\big)
+\end{align}
+Note that, in eq (10), $L$ is convex since it is just a summation of convex functions and it is also quadratic. Thus, it is guaranteed to have a global minimum and minimum is achieved when $a = 2\big(\sum_{k\in I}\lambda_k x_k - \sum_{k\in J}\mu_k x_k \big)$ and $\sum_{k\in I}\lambda_k = \sum_{k\in J}\mu_k$. Thus, for Lagragian function, we have:\begin{align}
+F &= \inf_{a,b} L(a,b,\lambda,\mu) = -\bigg\lvert\bigg\lvert\sum_{k\in I}\lambda_k x_k - \sum_{k\in j}\mu_k x_k \bigg\rvert\bigg\rvert^2 + \sum_{k\in I}\lambda_k + \sum_{k\in J}\mu_k
+\end{align}
+Let $s = \sum_{k \in I} \lambda_k = \sum_{k \in J} \mu_k$, and $\lambda_k' = \frac{\lambda_k}{s}, \mu_k' = \frac{\mu_k}{s}$, then the optimization problem of eq (11), which is the dual optimization problem of eq (10), is
+\begin{align}
+\max_{\lambda, \mu}\ &-\bigg\lvert\bigg\lvert\sum_{k\in I}\lambda_k x_k - \sum_{k\in J}\mu_k x_k \bigg\rvert\bigg\rvert^2 + \sum_{k\in I}\lambda_k + \sum_{k\in J}\mu_k\\
+&= -s^2\bigg\lvert\bigg\lvert \sum_{k\in I}\frac{\lambda_k}{s} x_k - \sum_{k\in J}\frac{\mu_k}{s} x_k \bigg\rvert\bigg\rvert^2 + 2s\\
+\max_{s,\lambda', \mu'}\ &-s^2\bigg\lvert\bigg\lvert\sum_{k\in I}\lambda_k' x_k - \sum_{k\in J}\mu_k x_k' \bigg\rvert\bigg\rvert^2 + 2s\\
+\text{s.t}\ &\sum_{k \in I}\lambda_k' = \sum_{k \in J}\mu_k' = 1\\
+&\lambda \ge 0, \mu \ge 0
+\end{align}
+In eq (14), $s$ achieves its maximum, when $s^{-1} = \Big\lvert\Big\lvert\sum_{k\in I}\lambda_k' x_k - \sum_{k\in J}\mu_k x_k' \Big\rvert\Big\rvert^2$. Thus, maximizing $s$ is equivalent to minimizing $\Big\lvert\Big\lvert\sum_{k\in I}\lambda_k' x_k - \sum_{k\in j}\mu_k x_k' \Big\rvert\Big\rvert$. So we have,\begin{align}
+\min_{\lambda',\mu'}\ &\Big\lvert\Big\lvert\sum_{k\in I}\lambda_k' x_k - \sum_{k\in j}\mu_k x_k' \Big\rvert\Big\rvert\\
+\text{s.t}\ &\sum_{k\in I} \lambda_k' = \sum_{k\in J} \mu_k' = 1\\
+&\lambda', \mu'\ge 0
+\end{align}
+which is equivalent to our original optimal problem of maximizing the distance between the two hyperplanes. In other words, eq (17) is minimizing the distance between one point in conv $\big(x_k\big)_{k\in I}$ and one point in conv $\big(x_k\big)_{k\in J}$.\\ \\
+\textbf{Remark 2:} In case that the data sets are not linearly separable, one can use Kernel Method (Kernel Trick) to add another dimension to the data sets. For example, if we are given two dimensionals data sets that cannot be linearly separable, we can transform those data sets into three dimensionals space, where it may be able to be linearly separatable. The arguably simplest example is the linear kernel, also called dot-product. (For reference, see [2], Chapter 6 Kernels, and [5])
+
+\begin{thebibliography}{9}
+\bibitem{ConvexAnalysis} 
+Rockafellar, R. Tyrell. 
+\textit{Convex Analysis}. 
+1970.
+ 
+\bibitem{SVMS} 
+Kowalczyk, Alexandre.
+\textit{Support Vector Machines Succinctly}. 
+Syncfusion, Inc. 2017.
+
+\bibitem{AdvOpt} 
+Singer, Yaron.
+\textit{Advanced Optimization}. 
+2016.
+\\ \texttt{https://people.seas.harvard.edu/\textasciitilde yaron/AM221-S16/lecture\_notes/AM221\_lecture13.pdf}
+
+\bibitem{AdvOpt} 
+Patel, Savan.
+``SVM (Support Vector Machine) —Theory." Medium.com 
+May 3, 2017.
+\\ \texttt{https://medium.com/machine-learning-101/ \\ chapter-2-svm-support-vector-machine-theory-f0812effc72}
+
+\bibitem{AdvOpt} 
+Catanzaro, Bryan Christopher.
+``Fast Support Vector Machine Training and
+Classification on Graphics Processors." Berkeley.
+Feb 8, 2008.
+\\ \texttt{https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/EECS-2008-11.pdf}
+\end{thebibliography}
+
 \end{document}
